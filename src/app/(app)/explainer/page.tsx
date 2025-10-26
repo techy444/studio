@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useState, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { codeSnippetExplainer } from '@/ai/flows/code-snippet-explainer';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -47,7 +47,7 @@ function SubmitButton() {
 }
 
 export default function ExplainerPage() {
-  const [state, formAction] = useFormState(explainerFormAction, initialState);
+  const [state, formAction] = useActionState(explainerFormAction, initialState);
   const [code, setCode] = useState(`function MyComponent() {\n  const [value, setValue] = useState(null);\n\n  useEffect(() => {\n    // some side effect\n  }, []);\n\n  return <div>{value}</div>\n}`);
 
   return (
