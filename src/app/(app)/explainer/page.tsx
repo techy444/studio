@@ -1,54 +1,54 @@
 "use client"
 
-import { useState, useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { codeSnippetExplainer } from '@/ai/flows/code-snippet-explainer';
+import { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { BotMessageSquare, RefreshCw, Send, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
-const initialState = {
-  explanation: '',
-  error: '',
-};
-
-async function explainerFormAction(prevState: any, formData: FormData) {
-  const codeSnippet = formData.get('codeSnippet') as string;
-  if (!codeSnippet || codeSnippet.trim().length < 10) {
-      return { explanation: '', error: 'Please enter a valid code snippet (at least 10 characters).' };
-  }
-  try {
-    const result = await codeSnippetExplainer({ codeSnippet });
-    return { explanation: result.explanation, error: '' };
-  } catch (e: any) {
-    return { explanation: '', error: e.message || 'An unknown error occurred.' };
-  }
-}
-
-function SubmitButton() {
-    const { pending } = useFormStatus();
-    return (
-        <Button type="submit" size="lg" disabled={pending}>
-            {pending ? (
-                <>
-                    <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
-                    Analyzing...
-                </>
-            ) : (
-                <>
-                    <Send className="mr-2 h-5 w-5" />
-                    Explain Code
-                </>
-            )}
-        </Button>
-    )
-}
+import { getApiUrl } from '@/lib/auth';
 
 export default function ExplainerPage() {
-  const [state, formAction] = useActionState(explainerFormAction, initialState);
   const [code, setCode] = useState(`function MyComponent() {\n  const [value, setValue] = useState(null);\n\n  useEffect(() => {\n    // some side effect\n  }, []);\n\n  return <div>{value}</div>\n}`);
+  const [explanation, setExplanation] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!code || code.trim().length < 10) {
+      setError('Please enter a valid code snippet (at least 10 characters).');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setExplanation('');
+
+    try {
+      const API_URL = getApiUrl();
+      const response = await fetch(`${API_URL}/api/explainer/explain`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code_snippet: code }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to explain code');
+      }
+
+      setExplanation(data.explanation);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while explaining the code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -63,7 +63,7 @@ export default function ExplainerPage() {
       </div>
       
       <div className="max-w-4xl mx-auto">
-        <form action={formAction}>
+        <form onSubmit={handleSubmit}>
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline">Enter Code Snippet</CardTitle>
@@ -77,15 +77,28 @@ export default function ExplainerPage() {
                         onChange={e => setCode(e.target.value)}
                         required
                         minLength={10}
+                        disabled={isLoading}
                     />
                 </CardContent>
             </Card>
             <div className="flex justify-end mt-4">
-                <SubmitButton />
+                <Button type="submit" size="lg" disabled={isLoading}>
+                    {isLoading ? (
+                        <>
+                            <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
+                            Analyzing...
+                        </>
+                    ) : (
+                        <>
+                            <Send className="mr-2 h-5 w-5" />
+                            Explain Code
+                        </>
+                    )}
+                </Button>
             </div>
         </form>
 
-        {state.explanation && (
+        {explanation && (
             <div className="mt-8">
                 <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
                     <Sparkles className="h-6 w-6 text-accent" />
@@ -94,16 +107,16 @@ export default function ExplainerPage() {
                 <Card>
                     <CardContent className="p-6">
                         <pre className="whitespace-pre-wrap font-body text-foreground/90 text-sm leading-relaxed">
-                            {state.explanation}
+                            {explanation}
                         </pre>
                     </CardContent>
                 </Card>
             </div>
         )}
-        {state.error && (
+        {error && (
              <Alert variant="destructive" className="mt-8">
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{state.error}</AlertDescription>
+                <AlertDescription>{error}</AlertDescription>
             </Alert>
         )}
       </div>
