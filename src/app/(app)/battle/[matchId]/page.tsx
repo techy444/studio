@@ -1,14 +1,16 @@
 "use client"
 import { placeholderProblems, placeholderUsers } from '@/lib/placeholder-data';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Send, Timer } from 'lucide-react';
+import { Send, Timer, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
+import { authenticatedFetch } from '@/lib/auth';
 
 const problem = placeholderProblems[1]; // Use a fixed problem for mock battle
 const currentUser = placeholderUsers[0];
@@ -16,8 +18,12 @@ const opponent = placeholderUsers[1];
 
 export default function BattleRoomPage({ params }: { params: { matchId: string } }) {
   const [code, setCode] = useState('');
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+  const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes (1800 seconds)
   const [opponentProgress, setOpponentProgress] = useState(10);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [battleEnded, setBattleEnded] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if(problem) {
@@ -25,7 +31,14 @@ export default function BattleRoomPage({ params }: { params: { matchId: string }
     }
 
     const timer = setInterval(() => {
-      setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          // Time's up! Handle timeout
+          handleTimeout();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
     
     const opponentTimer = setInterval(() => {
@@ -37,6 +50,33 @@ export default function BattleRoomPage({ params }: { params: { matchId: string }
       clearInterval(opponentTimer);
     };
   }, []);
+
+  const handleTimeout = async () => {
+    if (battleEnded) return;
+    setBattleEnded(true);
+
+    try {
+      await authenticatedFetch('http://localhost:8001/api/battle/timeout', {
+        method: 'POST',
+        body: JSON.stringify({
+          battle_id: params.matchId,
+          winner_id: null
+        })
+      });
+
+      toast({
+        title: "Time's Up!",
+        description: "The battle has ended due to timeout.",
+        variant: "destructive"
+      });
+
+      setTimeout(() => {
+        router.push('/battle');
+      }, 2000);
+    } catch (error) {
+      console.error('Error handling timeout:', error);
+    }
+  };
 
   if (!problem) {
     notFound();
