@@ -41,6 +41,11 @@ export const isAuthenticated = (): boolean => {
   return !!getAuthToken();
 };
 
+// Get API URL
+export const getApiUrl = () => {
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+};
+
 // API call with authentication
 export const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
   const token = getAuthToken();
