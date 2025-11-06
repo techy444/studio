@@ -52,13 +52,14 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
     const endpoint = isLogin ? "/api/auth/login" : "/api/auth/signup";
     const body = isLogin
       ? { email: formData.email, password: formData.password }
       : { email: formData.email, password: formData.password, username: formData.username };
 
     try {
-      const response = await fetch(`http://localhost:8001${endpoint}`, {
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
