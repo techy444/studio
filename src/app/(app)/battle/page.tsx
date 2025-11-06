@@ -1,19 +1,31 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Swords, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { placeholderUsers } from '@/lib/placeholder-data';
+import { isAuthenticated, getAuthUser } from '@/lib/auth';
+import { Loading } from '@/components/ui/loading';
 
 export default function BattlePage() {
     const [isSearching, setIsSearching] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
     const currentUser = placeholderUsers[0];
     const opponent = placeholderUsers[1];
+
+    useEffect(() => {
+        // Check authentication
+        if (!isAuthenticated()) {
+            router.push('/auth/login');
+        } else {
+            setIsLoading(false);
+        }
+    }, [router]);
 
     const handleFindMatch = () => {
         setIsSearching(true);
@@ -23,6 +35,10 @@ export default function BattlePage() {
             router.push('/battle/match-123');
         }, 3000);
     };
+
+    if (isLoading) {
+        return <Loading message="Connecting to Arena..." />;
+    }
     
     return (
         <div className="container mx-auto flex items-center justify-center flex-1 py-8">
