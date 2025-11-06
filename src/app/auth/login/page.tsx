@@ -25,9 +25,10 @@ export default function LoginPage() {
   useEffect(() => {
     // Check if user is already logged in
     const token = localStorage.getItem("token");
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
     if (token) {
       // Verify token
-      fetch("http://localhost:8001/api/auth/me", {
+      fetch(`${API_URL}/api/auth/me`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
