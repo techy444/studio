@@ -224,6 +224,40 @@ async def start_battle(current_user: dict = Depends(get_current_user)):
     
     return {"message": "Battle started", "battle_id": battle_id}
 
+class CodeExplainerRequest(BaseModel):
+    code_snippet: str
+
+@app.post("/api/explainer/explain")
+async def explain_code(request: CodeExplainerRequest):
+    """
+    Explain code snippet using AI
+    """
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        import uuid
+        
+        # Initialize chat with Emergent LLM key
+        chat = LlmChat(
+            api_key=os.getenv("EMERGENT_LLM_KEY"),
+            session_id=str(uuid.uuid4()),
+            system_message="You are a senior engineer explaining code line by line. Identify and explain any relevant programming paradigms such as dependency injection, design patterns, and best practices."
+        ).with_model("gemini", "gemini-2.0-flash")
+        
+        # Create user message
+        user_message = UserMessage(
+            text=f"Explain the following code snippet line by line:\n\n```\n{request.code_snippet}\n```"
+        )
+        
+        # Get explanation
+        explanation = await chat.send_message(user_message)
+        
+        return {"explanation": explanation}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to explain code: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
