@@ -55,8 +55,8 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="w-full max-w-sm mx-auto">
-                    <Link href="/practice">
-                      <Button size="lg" className="w-full">
+                    <Link href="/auth/login">
+                      <Button size="lg" className="w-full" data-testid="enter-arena-button">
                         Enter the Arena <ArrowRight className="ml-2 h-5 w-5" />
                       </Button>
                     </Link>
