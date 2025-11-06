@@ -56,7 +56,8 @@ export default function BattleRoomPage({ params }: { params: { matchId: string }
     setBattleEnded(true);
 
     try {
-      await authenticatedFetch('http://localhost:8001/api/battle/timeout', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+      await authenticatedFetch(`${API_URL}/api/battle/timeout`, {
         method: 'POST',
         body: JSON.stringify({
           battle_id: params.matchId,
