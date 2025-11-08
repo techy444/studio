@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { placeholderProblems } from '@/lib/placeholder-data';
 import type { Problem } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, ArrowRight } from 'lucide-react';
+import { Search, ArrowRight, Loader2 } from 'lucide-react';
+import { getApiUrl } from '@/lib/auth';
 
 const difficultyColors = {
   Easy: 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30',
@@ -17,14 +17,37 @@ const difficultyColors = {
   Hard: 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30',
 };
 
-const categories = [...new Set(placeholderProblems.map(p => p.category))];
-
 export default function PracticePage() {
   const [search, setSearch] = useState('');
   const [difficulty, setDifficulty] = useState('all');
   const [category, setCategory] = useState('all');
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<string[]>([]);
 
-  const filteredProblems = placeholderProblems.filter(problem => {
+  useEffect(() => {
+    fetchProblems();
+  }, []);
+
+  const fetchProblems = async () => {
+    try {
+      const API_URL = getApiUrl();
+      const response = await fetch(`${API_URL}/api/problems`);
+      const data = await response.json();
+      
+      setProblems(data.problems || []);
+      
+      // Extract unique categories
+      const uniqueCategories = [...new Set(data.problems.map((p: Problem) => p.category))];
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error('Failed to fetch problems:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredProblems = problems.filter(problem => {
     return (
       (problem.title.toLowerCase().includes(search.toLowerCase()) ||
        problem.description.toLowerCase().includes(search.toLowerCase())) &&
@@ -33,12 +56,23 @@ export default function PracticePage() {
     );
   });
 
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8 flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+          <p className="text-muted-foreground">Loading problems...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8">
       <div className="space-y-4 mb-8">
         <h1 className="text-4xl font-bold font-headline tracking-tight">Problem Set</h1>
         <p className="text-muted-foreground">
-          Sharpen your coding skills with our collection of problems. Filter by difficulty, category, or search by keyword.
+          Sharpen your coding skills with our collection of {problems.length} problems. Filter by difficulty, category, or search by keyword.
         </p>
       </div>
 
@@ -78,7 +112,7 @@ export default function PracticePage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProblems.map((problem) => (
-          <Card key={problem.id} className="flex flex-col hover:border-accent transition-colors">
+          <Card key={problem.id} className="flex flex-col hover:border-accent transition-colors" data-testid={`problem-${problem.id}`}>
             <CardHeader>
               <CardTitle className="font-headline text-xl">{problem.title}</CardTitle>
               <CardDescription className="line-clamp-2">{problem.description}</CardDescription>
@@ -93,7 +127,7 @@ export default function PracticePage() {
             </CardContent>
             <CardFooter>
               <Link href={`/practice/${problem.id}`} className="w-full">
-                <Button className="w-full">
+                <Button className="w-full" data-testid={`solve-${problem.id}`}>
                   Solve Problem <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
