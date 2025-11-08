@@ -313,6 +313,58 @@ async def start_battle(current_user: dict = Depends(get_current_user)):
     
     return {"message": "Battle started", "battle_id": battle_id}
 
+
+@app.get("/api/problems")
+async def get_problems(
+    difficulty: Optional[str] = None,
+    category: Optional[str] = None,
+    search: Optional[str] = None
+):
+    """
+    Get all problems with optional filtering
+    """
+    query = {}
+    
+    if difficulty:
+        query["difficulty"] = difficulty
+    
+    if category:
+        query["category"] = category
+    
+    if search:
+        query["$or"] = [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}}
+        ]
+    
+    problems = list(problems_collection.find(query))
+    
+    # Convert MongoDB _id to string and rename to id
+    for problem in problems:
+        problem["id"] = problem.pop("problem_id")
+        problem.pop("_id", None)
+    
+    return {"problems": problems, "count": len(problems)}
+
+@app.get("/api/problems/{problem_id}")
+async def get_problem(problem_id: str):
+    """
+    Get a specific problem by ID
+    """
+    problem = problems_collection.find_one({"problem_id": problem_id})
+    
+    if not problem:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Problem not found"
+        )
+    
+    problem["id"] = problem.pop("problem_id")
+    problem.pop("_id", None)
+    
+    return problem
+
+
 @app.post("/api/explainer/explain")
 async def explain_code(request: CodeExplainerRequest, current_user: dict = Depends(get_current_user)):
     """
