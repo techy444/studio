@@ -1,5 +1,4 @@
 "use client"
-import { placeholderProblems } from '@/lib/placeholder-data';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,8 +6,10 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Play, Send, RefreshCw, AlertCircle } from 'lucide-react';
+import { Play, Send, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { getApiUrl } from '@/lib/auth';
+import type { Problem } from '@/lib/types';
 
 const difficultyColors = {
   Easy: 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30',
@@ -21,16 +22,52 @@ type Output = {
   message: string;
 };
 
-export default function ProblemPage({ params }: { params: { problemId: string } }) {
-  const problem = placeholderProblems.find(p => p.id === params.problemId);
+export default function ProblemPage({ params }: { params: Promise<{ problemId: string }> }) {
+  const [problemId, setProblemId] = useState<string>('');
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
   const [output, setOutput] = useState<Output>({ status: 'initial', message: 'Run your code to see the output here.' });
   
   useEffect(() => {
-    if (problem) {
-      setCode(problem.defaultCode);
+    // Unwrap params properly for Next.js 15
+    params.then(({ problemId }) => {
+      setProblemId(problemId);
+      fetchProblem(problemId);
+    });
+  }, [params]);
+
+  const fetchProblem = async (id: string) => {
+    try {
+      const API_URL = getApiUrl();
+      const response = await fetch(`${API_URL}/api/problems/${id}`);
+      
+      if (!response.ok) {
+        setProblem(null);
+        return;
+      }
+      
+      const data = await response.json();
+      setProblem(data);
+      setCode(data.defaultCode || '');
+    } catch (error) {
+      console.error('Failed to fetch problem:', error);
+      setProblem(null);
+    } finally {
+      setLoading(false);
     }
-  }, [problem]);
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8 flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+          <p className="text-muted-foreground">Loading problem...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!problem) {
     notFound();
@@ -74,7 +111,7 @@ export default function ProblemPage({ params }: { params: { problemId: string } 
         <Separator className="my-6" />
 
         <div className="space-y-6">
-          {problem.examples.map((example, index) => (
+          {problem.examples?.map((example: any, index: number) => (
             <div key={index}>
               <h3 className="font-semibold mb-2">Example {index + 1}:</h3>
               <Card>
@@ -100,7 +137,7 @@ export default function ProblemPage({ params }: { params: { problemId: string } 
                     value={code}
                     onChange={e => setCode(e.target.value)}
                 />
-                <Button variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => setCode(problem.defaultCode)}>
+                <Button variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => setCode(problem.defaultCode || '')}>
                   <RefreshCw className="h-4 w-4" />
                   <span className="sr-only">Reset Code</span>
                 </Button>
@@ -115,11 +152,11 @@ export default function ProblemPage({ params }: { params: { problemId: string } 
                 <TabsTrigger value="testcases">Test Cases</TabsTrigger>
               </TabsList>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleRunCode} disabled={output.status === 'running'}>
+                <Button variant="outline" onClick={handleRunCode} disabled={output.status === 'running'} data-testid="run-code">
                   <Play className="mr-2 h-4 w-4" />
                   Run
                 </Button>
-                <Button onClick={handleSubmitCode} disabled={output.status === 'running'}>
+                <Button onClick={handleSubmitCode} disabled={output.status === 'running'} data-testid="submit-code">
                   <Send className="mr-2 h-4 w-4" />
                   Submit
                 </Button>
@@ -144,7 +181,7 @@ export default function ProblemPage({ params }: { params: { problemId: string } 
               <Card>
                 <CardContent className="p-4">
                   <div className="space-y-2">
-                    {problem.testCases.map((tc, index) => (
+                    {problem.testCases?.map((tc: any, index: number) => (
                       <div key={index} className="font-code text-sm">
                         <p className="font-semibold">Case {index + 1}:</p>
                         <p><span className="text-muted-foreground">Input:</span> {tc.input}</p>
