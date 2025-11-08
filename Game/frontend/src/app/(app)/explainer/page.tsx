@@ -6,13 +6,24 @@ import { Button } from '@/components/ui/button';
 import { BotMessageSquare, RefreshCw, Send, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { getApiUrl, getAuthToken } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Settings } from 'lucide-react';
 
+const SUPPORTED_LANGUAGES = [
+  { value: 'python', label: 'Python' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'java', label: 'Java' },
+  { value: 'c', label: 'C' },
+  { value: 'cpp', label: 'C++' },
+];
+
 export default function ExplainerPage() {
   const [code, setCode] = useState(`function MyComponent() {\n  const [value, setValue] = useState(null);\n\n  useEffect(() => {\n    // some side effect\n  }, []);\n\n  return <div>{value}</div>\n}`);
+  const [language, setLanguage] = useState('javascript');
   const [explanation, setExplanation] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +55,10 @@ export default function ExplainerPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ code_snippet: code }),
+        body: JSON.stringify({ 
+          code_snippet: code,
+          language: language 
+        }),
       });
 
       const data = await response.json();
@@ -85,21 +99,41 @@ export default function ExplainerPage() {
                 <CardHeader>
                     <CardTitle className="font-headline">Enter Code Snippet</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <Textarea 
-                        name="codeSnippet"
-                        placeholder="Paste your code here..."
-                        className="w-full bg-secondary/50 font-code text-base resize-y min-h-[200px]"
-                        value={code}
-                        onChange={e => setCode(e.target.value)}
-                        required
-                        minLength={10}
-                        disabled={isLoading}
-                    />
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="language">Programming Language</Label>
+                        <Select value={language} onValueChange={setLanguage}>
+                            <SelectTrigger id="language" data-testid="language-selector">
+                                <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {SUPPORTED_LANGUAGES.map((lang) => (
+                                    <SelectItem key={lang.value} value={lang.value}>
+                                        {lang.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="codeSnippet">Code</Label>
+                        <Textarea 
+                            id="codeSnippet"
+                            name="codeSnippet"
+                            data-testid="code-input"
+                            placeholder="Paste your code here..."
+                            className="w-full bg-secondary/50 font-code text-base resize-y min-h-[200px]"
+                            value={code}
+                            onChange={e => setCode(e.target.value)}
+                            required
+                            minLength={10}
+                            disabled={isLoading}
+                        />
+                    </div>
                 </CardContent>
             </Card>
             <div className="flex justify-end mt-4">
-                <Button type="submit" size="lg" disabled={isLoading}>
+                <Button type="submit" size="lg" disabled={isLoading} data-testid="explain-button">
                     {isLoading ? (
                         <>
                             <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
