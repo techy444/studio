@@ -398,13 +398,14 @@ async def explain_code(request: CodeExplainerRequest, current_user: dict = Depen
             model = genai.GenerativeModel('gemini-2.5-flash')
             
             # Create prompt
-            prompt = f"""You are a senior engineer explaining code line by line. 
+            language = request.language or "Python"
+            prompt = f"""You are a senior engineer explaining {language} code line by line. 
 Identify and explain any relevant programming paradigms such as dependency injection, 
 design patterns, and best practices.
 
-Please explain the following code snippet in detail:
+Please explain the following {language} code snippet in detail:
 
-```
+```{language.lower()}
 {request.code_snippet}
 ```
 
