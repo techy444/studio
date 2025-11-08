@@ -66,6 +66,12 @@ class BattleTimeoutRequest(BaseModel):
 
 class CodeExplainerRequest(BaseModel):
     code_snippet: str
+    language: Optional[str] = "python"  # Default to Python if not specified
+
+class ProblemFilter(BaseModel):
+    difficulty: Optional[str] = None
+    category: Optional[str] = None
+    search: Optional[str] = None
 
 # Helper function to get current user from token
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
