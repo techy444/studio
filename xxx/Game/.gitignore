@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pytest_cache/
+
+# Virtualenvs
+.venv/
+backend/.venv/
+
+# Env files
+*.env
+backend/.env
+
+# Node / Next build
+frontend/.next/
+frontend/node_modules/
+
+# Editor
+.vscode/
+.idea/
+
+# Misc
+.DS_Store
