@@ -62,7 +62,11 @@ export default function ProblemPage({ params }: { params: Promise<{ problemId: s
       
       const data = await response.json();
       setProblem(data);
-      setCode(data.defaultCode || '');
+      
+      // Create C++ template for the problem
+      const template = createCppTemplate(data.title, 'vector<int> twoSum(vector<int>& nums, int target)');
+      setDefaultCode(template);
+      setCode(template);
     } catch (error) {
       console.error('Failed to fetch problem:', error);
       setProblem(null);
