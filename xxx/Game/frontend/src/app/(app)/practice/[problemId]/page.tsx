@@ -4,12 +4,23 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Play, Send, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getApiUrl } from '@/lib/auth';
 import type { Problem } from '@/lib/types';
+import dynamic from 'next/dynamic';
+import { createCppTemplate } from '@/components/CodeEditor';
+
+// Dynamically import CodeEditor to avoid SSR issues with Monaco
+const CodeEditor = dynamic(() => import('@/components/CodeEditor'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full flex items-center justify-center bg-card border rounded-lg">
+      <Loader2 className="h-6 w-6 animate-spin text-accent" />
+    </div>
+  ),
+});
 
 const difficultyColors = {
   Easy: 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30',
