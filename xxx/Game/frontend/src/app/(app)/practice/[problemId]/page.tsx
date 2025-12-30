@@ -38,6 +38,8 @@ export default function ProblemPage({ params }: { params: Promise<{ problemId: s
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
+  const [defaultCode, setDefaultCode] = useState('');
+  const [resetTrigger, setResetTrigger] = useState(0);
   const [output, setOutput] = useState<Output>({ status: 'initial', message: 'Run your code to see the output here.' });
   
   useEffect(() => {
