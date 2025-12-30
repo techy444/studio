@@ -151,19 +151,25 @@ export default function ProblemPage({ params }: { params: Promise<{ problemId: s
 
       {/* Code Editor and Output */}
       <div className="flex flex-col h-full">
-        <div className="flex-grow flex flex-col">
-            <h2 className="text-xl font-bold font-headline mb-2">Solution</h2>
-            <div className="bg-card border rounded-lg flex-grow flex flex-col relative">
-                <Textarea 
-                    placeholder="Write your code here..."
-                    className="flex-grow w-full bg-transparent border-0 rounded-t-lg font-code text-base resize-none focus-visible:ring-0"
-                    value={code}
-                    onChange={e => setCode(e.target.value)}
-                />
-                <Button variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => setCode(problem.defaultCode || '')}>
-                  <RefreshCw className="h-4 w-4" />
-                  <span className="sr-only">Reset Code</span>
-                </Button>
+        <div className="flex-grow flex flex-col min-h-[500px]">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-bold font-headline">Solution</h2>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleResetCode}
+                data-testid="reset-code-button"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reset Code
+              </Button>
+            </div>
+            <div className="flex-grow">
+              <CodeEditor
+                defaultCode={defaultCode}
+                onChange={setCode}
+                onResetTrigger={resetTrigger}
+              />
             </div>
         </div>
 
