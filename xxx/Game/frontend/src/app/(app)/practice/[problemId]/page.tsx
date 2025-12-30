@@ -110,6 +110,12 @@ export default function ProblemPage({ params }: { params: Promise<{ problemId: s
     }, 2000);
   }
 
+  const handleResetCode = () => {
+    // Reset both code and output
+    setResetTrigger(prev => prev + 1);
+    setOutput({ status: 'initial', message: 'Run your code to see the output here.' });
+  }
+
   return (
     <div className="container mx-auto grid md:grid-cols-2 gap-8 py-8 h-full flex-1">
       {/* Problem Description */}
