@@ -3,14 +3,25 @@ import { placeholderProblems, placeholderUsers } from '@/lib/placeholder-data';
 import { notFound, useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Send, Timer, Loader2 } from 'lucide-react';
+import { Send, Timer, Loader2, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { authenticatedFetch } from '@/lib/auth';
+import dynamic from 'next/dynamic';
+import { createCppTemplate } from '@/components/CodeEditor';
+
+// Dynamically import CodeEditor to avoid SSR issues with Monaco
+const CodeEditor = dynamic(() => import('@/components/CodeEditor'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full flex items-center justify-center bg-card border rounded-lg">
+      <Loader2 className="h-6 w-6 animate-spin text-accent" />
+    </div>
+  ),
+});
 
 const problem = placeholderProblems[1]; // Use a fixed problem for mock battle
 const currentUser = placeholderUsers[0];
@@ -18,6 +29,8 @@ const opponent = placeholderUsers[1];
 
 export default function BattleRoomPage({ params }: { params: { matchId: string } }) {
   const [code, setCode] = useState('');
+  const [defaultCode, setDefaultCode] = useState('');
+  const [resetTrigger, setResetTrigger] = useState(0);
   const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes (1800 seconds)
   const [opponentProgress, setOpponentProgress] = useState(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,7 +40,11 @@ export default function BattleRoomPage({ params }: { params: { matchId: string }
 
   useEffect(() => {
     if(problem) {
-      setCode(problem.defaultCode)
+      // Create C++ template for the battle problem
+      // Extract function signature from defaultCode if possible
+      const template = createCppTemplate(problem.title, 'bool isValid(string s)');
+      setDefaultCode(template);
+      setCode(template);
     }
 
     const timer = setInterval(() => {
@@ -79,6 +96,66 @@ export default function BattleRoomPage({ params }: { params: { matchId: string }
     }
   };
 
+  const handleSubmitCode = async () => {
+    if (isSubmitting || battleEnded) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Extract only user-written code for submission
+      const lines = code.split('\n');
+      let startIdx = -1;
+      let endIdx = -1;
+      
+      lines.forEach((line, index) => {
+        if (line.trim().includes('// USER CODE START')) {
+          startIdx = index + 1;
+        }
+        if (line.trim().includes('// USER CODE END')) {
+          endIdx = index;
+        }
+      });
+      
+      const userCode = startIdx !== -1 && endIdx !== -1 
+        ? lines.slice(startIdx, endIdx).join('\n').trim()
+        : code;
+
+      // TODO: Send userCode to backend for evaluation
+      console.log('Submitting user code:', userCode);
+      
+      // Mock submission
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast({
+        title: "Code Submitted!",
+        description: "Your solution has been submitted for evaluation.",
+      });
+      
+      setBattleEnded(true);
+      
+      setTimeout(() => {
+        router.push('/battle');
+      }, 2000);
+    } catch (error) {
+      console.error('Error submitting code:', error);
+      toast({
+        title: "Submission Failed",
+        description: "Failed to submit your code. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetCode = () => {
+    setResetTrigger(prev => prev + 1);
+    toast({
+      title: "Code Reset",
+      description: "Your code has been reset to the default template.",
+    });
+  };
+
   if (!problem) {
     notFound();
   }
@@ -128,15 +205,27 @@ export default function BattleRoomPage({ params }: { params: { matchId: string }
 
       {/* Code Editor and Opponent Progress */}
       <div className="flex flex-col h-full">
-        <div className="flex-grow flex flex-col">
-            <h2 className="text-xl font-bold font-headline mb-2">Your Solution</h2>
-            <div className="bg-card border rounded-lg flex-grow flex flex-col">
-                <Textarea 
-                    placeholder="Write your code here..."
-                    className="flex-grow w-full bg-transparent border-0 rounded-t-lg font-code text-base resize-none focus-visible:ring-0"
-                    value={code}
-                    onChange={e => setCode(e.target.value)}
-                />
+        <div className="flex-grow flex flex-col min-h-[500px]">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-bold font-headline">Your Solution</h2>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleResetCode}
+                disabled={isSubmitting || battleEnded}
+                data-testid="reset-code-button"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reset Code
+              </Button>
+            </div>
+            <div className="flex-grow">
+              <CodeEditor
+                defaultCode={defaultCode}
+                onChange={setCode}
+                onResetTrigger={resetTrigger}
+                language="cpp"
+              />
             </div>
         </div>
 
@@ -148,9 +237,23 @@ export default function BattleRoomPage({ params }: { params: { matchId: string }
                 </div>
                 <Progress value={opponentProgress} className="w-full h-3" />
             </div>
-            <Button className="w-full h-12 text-lg">
-              <Send className="mr-2 h-5 w-5" />
-              Submit & Win
+            <Button 
+              className="w-full h-12 text-lg" 
+              onClick={handleSubmitCode}
+              disabled={isSubmitting || battleEnded}
+              data-testid="submit-battle-code"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-5 w-5" />
+                  Submit & Win
+                </>
+              )}
             </Button>
         </div>
       </div>

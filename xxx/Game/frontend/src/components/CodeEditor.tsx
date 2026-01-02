@@ -8,12 +8,16 @@ interface CodeEditorProps {
   defaultCode: string;
   onChange?: (code: string) => void;
   onResetTrigger?: number; // Trigger reset when this changes
+  language?: string; // Default: 'cpp'
+  readOnly?: boolean; // Optional read-only mode
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({ 
   defaultCode, 
   onChange,
-  onResetTrigger 
+  onResetTrigger,
+  language = 'cpp',
+  readOnly = false
 }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [code, setCode] = useState(defaultCode);
@@ -192,7 +196,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     <div className="h-full w-full border rounded-lg overflow-hidden">
       <Editor
         height="100%"
-        defaultLanguage="cpp"
+        defaultLanguage={language}
         value={code}
         theme="vs-dark"
         options={{
@@ -214,6 +218,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             horizontal: 'visible',
             useShadows: false,
           },
+          readOnly: readOnly,
         }}
         onMount={handleEditorDidMount}
       />
