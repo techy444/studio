@@ -103,6 +103,11 @@ class ProblemFilter(BaseModel):
     category: Optional[str] = None
     search: Optional[str] = None
 
+class ExecuteCodeRequest(BaseModel):
+    wrappedCode: str
+    stdinInput: str = ""
+    mode: str = "practice"  # "practice" or "battle"
+
 # Helper function to get current user from token
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
