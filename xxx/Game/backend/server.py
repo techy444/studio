@@ -604,6 +604,66 @@ async def test_wrapper_generation(request: TestWrapperRequest):
         )
 
 
+@app.post("/api/code/execute")
+async def execute_code(request: ExecuteCodeRequest):
+    """
+    Execute wrapped C++ code using Judge0
+    Mode-agnostic: Works for BOTH Practice and Battle modes
+    
+    Request body:
+    {
+        "wrappedCode": "full C++ program as string",
+        "stdinInput": "test input data",
+        "mode": "practice"  // or "battle"
+    }
+    
+    Response:
+    {
+        "success": true/false,
+        "status": "accepted" | "compilation_error" | "runtime_error" | "time_limit_exceeded" | "internal_error",
+        "stdout": "program output",
+        "stderr": "error output",
+        "compile_output": "compiler messages",
+        "execution_time": 0.123,  // seconds
+        "memory": 1024,  // KB
+        "status_id": 3,  // Judge0 status code
+        "error_message": "error description if failed"
+    }
+    """
+    try:
+        # Validate inputs
+        if not request.wrappedCode or len(request.wrappedCode.strip()) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="wrappedCode cannot be empty"
+            )
+        
+        if request.mode not in ["practice", "battle"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="mode must be 'practice' or 'battle'"
+            )
+        
+        # Execute code using Judge0
+        result = judge0_execute_code(
+            source_code=request.wrappedCode,
+            stdin_input=request.stdinInput,
+            mode=request.mode
+        )
+        
+        # Return raw execution results (no verdict logic here)
+        return result
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Catch-all for unexpected errors
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Execution service error: {str(e)}"
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
