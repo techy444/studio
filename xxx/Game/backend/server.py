@@ -478,6 +478,126 @@ Provide a clear, line-by-line explanation."""
         detail="Failed to explain code"
     )
 
+
+@app.post("/api/code/generate-wrapper")
+async def generate_code_wrapper(request: GenerateWrapperRequest):
+    """
+    Generate full compilable C++ program from user function code
+    Mode-agnostic: Works for BOTH Practice and Battle modes
+    
+    Request body:
+    {
+        "userCode": "vector<int> result;\\nreturn result;",
+        "language": "cpp",
+        "problemMetadata": {
+            "functionName": "twoSum",
+            "className": "Solution",
+            "returnType": "vector<int>",
+            "parameters": [
+                {"name": "nums", "type": "vector<int>&"},
+                {"name": "target", "type": "int"}
+            ],
+            "inputFormat": ["array_int", "int"],
+            "outputFormat": "array_int"
+        }
+    }
+    """
+    try:
+        result = generate_wrapper(
+            user_code=request.userCode,
+            problem_metadata=request.problemMetadata,
+            language=request.language
+        )
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["error"]
+            )
+        
+        return {
+            "success": True,
+            "wrappedCode": result["wrappedCode"],
+            "language": request.language,
+            "message": "Wrapper generated successfully"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate wrapper: {str(e)}"
+        )
+
+
+@app.post("/api/code/test-wrapper")
+async def test_wrapper_generation(request: TestWrapperRequest):
+    """
+    Test endpoint: Generate wrapper by fetching problem metadata from database
+    
+    Request body:
+    {
+        "userCode": "vector<int> result;\\nreturn result;",
+        "problemId": "two-sum"
+    }
+    """
+    try:
+        # Fetch problem from database
+        problem = problems_collection.find_one({"problem_id": request.problemId})
+        
+        if not problem:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Problem '{request.problemId}' not found"
+            )
+        
+        # Extract metadata from problem
+        # Assuming problems have a 'metadata' field with wrapper generation info
+        problem_metadata = problem.get("metadata", {})
+        
+        # If metadata doesn't exist, create a default one (for testing)
+        if not problem_metadata:
+            problem_metadata = {
+                "functionName": problem.get("functionName", "solve"),
+                "className": "Solution",
+                "returnType": problem.get("returnType", "int"),
+                "parameters": problem.get("parameters", []),
+                "inputFormat": problem.get("inputFormat", ["int"]),
+                "outputFormat": problem.get("outputFormat", "int")
+            }
+        
+        # Generate wrapper
+        result = generate_wrapper(
+            user_code=request.userCode,
+            problem_metadata=problem_metadata,
+            language="cpp"
+        )
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["error"]
+            )
+        
+        return {
+            "success": True,
+            "wrappedCode": result["wrappedCode"],
+            "problemId": request.problemId,
+            "problemTitle": problem.get("title", "Unknown"),
+            "metadata": problem_metadata,
+            "message": "Wrapper generated successfully from database metadata"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to test wrapper: {str(e)}"
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
