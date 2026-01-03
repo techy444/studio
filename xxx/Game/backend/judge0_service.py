@@ -88,6 +88,20 @@ class Judge0Service:
             }
         """
         try:
+            # Check if API key is configured
+            if not self.api_key:
+                return {
+                    "success": False,
+                    "status": "configuration_error",
+                    "stdout": "",
+                    "stderr": "",
+                    "compile_output": "",
+                    "execution_time": 0.0,
+                    "memory": 0,
+                    "status_id": 0,
+                    "error_message": "JUDGE0_API_KEY not configured. Please add your Judge0 API key to the .env file."
+                }
+            
             # Step 1: Submit code to Judge0
             submission_token = self._submit_code(source_code, stdin_input)
             
