@@ -50,11 +50,8 @@ class Judge0Service:
         self.api_url = os.getenv('JUDGE0_API_URL', 'https://judge0-ce.p.rapidapi.com')
         self.api_key = os.getenv('JUDGE0_API_KEY', '')
         
-        if not self.api_key:
-            raise ValueError(
-                "JUDGE0_API_KEY not found in environment variables. "
-                "Please set JUDGE0_API_KEY in your .env file."
-            )
+        # Don't raise error during init - handle it during execution
+        # This allows the server to start even without API key configured
         
         self.headers = {
             'Content-Type': 'application/json',
