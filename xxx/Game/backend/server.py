@@ -16,6 +16,7 @@ from database import db, users_collection, battles_collection, problems_collecti
 from auth_utils import verify_password, get_password_hash, create_access_token, verify_token
 from pymongo.errors import DuplicateKeyError
 from typing import List
+from code_wrapper import generate_wrapper
 
 app = FastAPI(title="CodeDuel Arena API")
 
