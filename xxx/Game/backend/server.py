@@ -88,6 +88,15 @@ class CodeExplainerRequest(BaseModel):
     code_snippet: str
     language: Optional[str] = "python"  # Default to Python if not specified
 
+class GenerateWrapperRequest(BaseModel):
+    userCode: str
+    language: str = "cpp"
+    problemMetadata: dict
+
+class TestWrapperRequest(BaseModel):
+    userCode: str
+    problemId: str  # Optional: fetch metadata from DB
+
 class ProblemFilter(BaseModel):
     difficulty: Optional[str] = None
     category: Optional[str] = None
