@@ -651,6 +651,13 @@ async def execute_code(request: ExecuteCodeRequest):
             mode=request.mode
         )
         
+        # Check if it's a configuration error and return proper HTTP status
+        if result.get("status") == "configuration_error":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=result.get("error_message", "Judge0 service not configured")
+            )
+        
         # Return raw execution results (no verdict logic here)
         return result
     
