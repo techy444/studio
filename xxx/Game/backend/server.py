@@ -679,6 +679,157 @@ async def execute_code(request: ExecuteCodeRequest):
         )
 
 
+@app.post("/api/code/verdict")
+async def get_code_verdict(
+    request: VerdictRequest,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
+):
+    """
+    LeetCode-style verdict system - Executes code against test cases and returns verdict
+    
+    Authentication:
+    - SUBMIT: Requires JWT token
+    - RUN: Optional authentication (can work as guest)
+    
+    Request body:
+    {
+        "problemId": "two-sum",
+        "wrappedCode": "full C++ program as string",
+        "mode": "practice",  // or "battle"
+        "action": "run",  // or "submit"
+        "battleId": "optional-battle-id"  // Only for battle mode
+    }
+    
+    Response for RUN:
+    {
+        "success": true,
+        "action": "run",
+        "verdict": "Accepted",
+        "testResults": [
+            {
+                "testCase": 1,
+                "input": "[2,7,11,15], 9",
+                "expectedOutput": "[0,1]",
+                "actualOutput": "[0,1]",
+                "passed": true,
+                "verdict": "Accepted",
+                "executionTime": 0.023,
+                "memory": 4096
+            }
+        ],
+        "testsPassed": 2,
+        "totalTests": 2,
+        "executionTime": 0.045,
+        "memory": 4096
+    }
+    
+    Response for SUBMIT:
+    {
+        "success": true,
+        "action": "submit",
+        "verdict": "Accepted",
+        "testsPassed": 5,
+        "totalTests": 5,
+        "executionTime": 0.125,
+        "memory": 4096,
+        "submissionId": "uuid"
+    }
+    """
+    try:
+        # Validate inputs
+        if not request.problemId:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="problemId is required"
+            )
+        
+        if not request.wrappedCode or len(request.wrappedCode.strip()) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="wrappedCode cannot be empty"
+            )
+        
+        if request.mode not in ["practice", "battle"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="mode must be 'practice' or 'battle'"
+            )
+        
+        if request.action not in ["run", "submit"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="action must be 'run' or 'submit'"
+            )
+        
+        # Authentication handling
+        user_id = None
+        
+        if request.action == "submit":
+            # SUBMIT requires authentication
+            if not credentials:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required for SUBMIT action",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
+            
+            # Verify token
+            token = credentials.credentials
+            payload = verify_token(token)
+            if not payload:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or expired token",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
+            
+            user_id = payload.get("sub")
+            
+            # Verify user exists
+            user = users_collection.find_one({"_id": user_id})
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found"
+                )
+        
+        elif request.action == "run":
+            # RUN is optional authentication - extract if present
+            if credentials:
+                token = credentials.credentials
+                payload = verify_token(token)
+                if payload:
+                    user_id = payload.get("sub")
+        
+        # Get verdict
+        verdict_result = get_verdict(
+            problem_id=request.problemId,
+            wrapped_code=request.wrappedCode,
+            mode=request.mode,
+            action=request.action,
+            user_id=user_id,
+            battle_id=request.battleId
+        )
+        
+        # Check if verdict service returned an error
+        if not verdict_result.get("success") and verdict_result.get("verdict") == "Internal Error":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=verdict_result.get("error_message", "Verdict system error")
+            )
+        
+        return verdict_result
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Catch-all for unexpected errors
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Verdict service error: {str(e)}"
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
