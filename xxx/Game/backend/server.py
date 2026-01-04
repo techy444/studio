@@ -109,6 +109,13 @@ class ExecuteCodeRequest(BaseModel):
     stdinInput: str = ""
     mode: str = "practice"  # "practice" or "battle"
 
+class VerdictRequest(BaseModel):
+    problemId: str
+    wrappedCode: str
+    mode: str = "practice"  # "practice" or "battle"
+    action: str = "run"  # "run" or "submit"
+    battleId: Optional[str] = None
+
 # Helper function to get current user from token
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
