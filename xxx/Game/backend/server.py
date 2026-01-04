@@ -12,12 +12,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import our modules
-from database import db, users_collection, battles_collection, problems_collection
+from database import db, users_collection, battles_collection, problems_collection, submissions_collection
 from auth_utils import verify_password, get_password_hash, create_access_token, verify_token
 from pymongo.errors import DuplicateKeyError
 from typing import List
 from code_wrapper import generate_wrapper
 from judge0_service import execute_code as judge0_execute_code
+from verdict_service import get_verdict
 
 app = FastAPI(title="CodeDuel Arena API")
 
