@@ -20,12 +20,15 @@ try:
     users_collection = db["users"]
     battles_collection = db["battles"]
     problems_collection = db["problems"]
+    submissions_collection = db["submissions"]
     
     # Create indexes (idempotent)
     users_collection.create_index("email", unique=True)
     users_collection.create_index("username", unique=True)
     battles_collection.create_index("battle_id", unique=True)
     problems_collection.create_index("problem_id", unique=True)
+    submissions_collection.create_index([("userId", 1), ("problemId", 1), ("submittedAt", -1)])
+    submissions_collection.create_index("battleId")
     
     logger.info("✓ Connected to MongoDB at %s", MONGO_URL)
     logger.info("✓ Using database: %s", MONGO_DB_NAME)
